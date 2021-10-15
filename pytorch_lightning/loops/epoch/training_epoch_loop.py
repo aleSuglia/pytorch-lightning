@@ -160,17 +160,17 @@ class TrainingEpochLoop(loops.Loop[_OUTPUTS_TYPE]):
         if batch_output.signal == -1:
             raise StopIteration
 
-        # update non-plateau LR schedulers
-        # update epoch-interval ones only when we are at the end of training epoch
-        self.update_lr_schedulers("step", update_plateau_schedulers=False)
-        if self._num_ready_batches_reached():
-            self.update_lr_schedulers("epoch", update_plateau_schedulers=False)
-
         batch_end_outputs = self._prepare_outputs_training_batch_end(
             batch_output.outputs,
             automatic=self.trainer.lightning_module.trainer.lightning_module.automatic_optimization,
             num_optimizers=len(self.trainer.optimizers),
         )
+
+        # update non-plateau LR schedulers
+        # update epoch-interval ones only when we are at the end of training epoch
+        self.update_lr_schedulers("step", update_plateau_schedulers=False)
+        if self._num_ready_batches_reached():
+            self.update_lr_schedulers("epoch", update_plateau_schedulers=False)
 
         # TODO: Update this in v1.7 (deprecation: #9816)
         model_fx = self.trainer.lightning_module.on_train_batch_end
