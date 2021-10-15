@@ -384,7 +384,7 @@ def test_lightning_cli_config_and_subclass_mode(tmpdir):
         "fit": {
             "model": {"class_path": "tests.helpers.BoringModel"},
             "data": {"class_path": "tests.helpers.BoringDataModule", "init_args": {"data_dir": str(tmpdir)}},
-            "trainer": {"default_root_dir": str(tmpdir), "max_epochs": 1, "weights_summary": None},
+            "trainer": {"default_root_dir": str(tmpdir), "max_epochs": 1, "enable_model_summary": False},
         }
     }
     config_path = tmpdir / "config.yaml"
@@ -574,20 +574,22 @@ def test_lightning_cli_link_arguments(tmpdir):
 
 class EarlyExitTestModel(BoringModel):
     def on_fit_start(self):
-        raise Exception("Error on fit start")
+        raise MisconfigurationException("Error on fit start")
 
 
 @pytest.mark.parametrize("logger", (False, True))
 @pytest.mark.parametrize(
     "trainer_kwargs",
     (
-        dict(accelerator="ddp_cpu"),
-        dict(accelerator="ddp_cpu", plugins="ddp_find_unused_parameters_false"),
-        pytest.param({"tpu_cores": 1}, marks=RunIf(tpu=True)),
+        dict(strategy="ddp_spawn", accelerator="cpu"),
+        dict(strategy="ddp", accelerator="cpu"),
+        pytest.param({"accelerator": "tpu"}, marks=RunIf(tpu=True)),
     ),
 )
-def test_cli_ddp_spawn_save_config_callback(tmpdir, logger, trainer_kwargs):
-    with mock.patch("sys.argv", ["any.py", "fit"]), pytest.raises(Exception, match=r"Error on fit start"):
+def test_cli_distributed_save_config_callback(tmpdir, logger, trainer_kwargs):
+    with mock.patch("sys.argv", ["any.py", "fit"]), pytest.raises(
+        MisconfigurationException, match=r"Error on fit start"
+    ):
         LightningCLI(
             EarlyExitTestModel,
             trainer_defaults={
