@@ -168,7 +168,8 @@ class TrainingEpochLoop(loops.Loop[_OUTPUTS_TYPE]):
 
         # update non-plateau LR schedulers
         # update epoch-interval ones only when we are at the end of training epoch
-        self.update_lr_schedulers("step", update_plateau_schedulers=False)
+        if self.batch_loop.done:
+            self.update_lr_schedulers("step", update_plateau_schedulers=False)
         if self._num_ready_batches_reached():
             self.update_lr_schedulers("epoch", update_plateau_schedulers=False)
 
